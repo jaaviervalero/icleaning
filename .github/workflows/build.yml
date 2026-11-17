@@ -1,0 +1,124 @@
+name: build
+
+# Tests on every PR and on demand; release binaries only when a v* tag is pushed.
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+# Least privilege by default; only the release job may write.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+
+      - name: Tests
+        run: python -m pytest -q
+
+  build:
+    name: Package (${{ matrix.name }})
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            artifact: iCleaning-windows-x64.exe
+            path: iCleaning-windows-x64.exe
+          - name: macos-arm64          # Apple Silicon
+            os: macos-14
+            artifact: iCleaning-macos-arm64.zip
+            path: iCleaning-macos-arm64.zip
+          - name: macos-x64            # Intel
+            os: macos-15-intel
+            artifact: iCleaning-macos-x64.zip
+            path: iCleaning-macos-x64.zip
+          - name: linux-x64            # oldest supported glibc for wider compatibility
+            os: ubuntu-22.04
+            artifact: iCleaning-linux-x64
+            path: iCleaning-linux-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dependencies and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller>=6.10"
+
+      - name: Build
+        run: pyinstaller --clean --noconfirm packaging/icleaning.spec
+
+      - name: Rename (Windows)
+        if: runner.os == 'Windows'
+        run: Move-Item dist\iCleaning.exe iCleaning-windows-x64.exe
+
+      - name: Rename (Linux)
+        if: runner.os == 'Linux'
+        run: mv dist/iCleaning iCleaning-linux-x64 && chmod +x iCleaning-linux-x64
+
+      # ditto keeps the .app bundle (permissions, symlinks) intact; plain zip does not.
+      - name: Zip the app (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent "dist/iCleaning.app" "${{ matrix.artifact }}"
+
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: ./iCleaning-linux-x64 --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: SHA256SUMS.txt
+        run: |
+          cd dist
+          sha256sum iCleaning-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # A draft: it is reviewed and published by hand on GitHub.
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: dist/*

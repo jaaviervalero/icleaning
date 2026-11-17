@@ -1,0 +1,12 @@
+# Private data of the old version (iCloud session, Photos.sqlite copy, thumbnails): never in the repo
+.datos/
+.venv/
+__pycache__/
+*.pyc
+*.part
+.pytest_cache/
+
+# Packaging output
+build/
+dist/
+*.egg-info/

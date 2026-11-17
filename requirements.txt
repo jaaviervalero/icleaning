@@ -1,0 +1,8 @@
+pyicloud==2026.11.2
+platformdirs==4.14.5
+keyring==25.7.0
+cryptography==50.0.2
+pymobiledevice3==11.57.1
+gphoto2==2.6.4; sys_platform == "linux"
+pyobjc-framework-ImageCaptureCore; sys_platform == "darwin"
+comtypes; sys_platform == "win32"

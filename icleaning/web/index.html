@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iCleaning</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="filters.css">
+<link rel="stylesheet" href="views.css">
+<script defer src="app.js"></script>
+<script defer src="filters.js"></script>
+<script defer src="views.js"></script>
+</head>
+<body>
+
+<div id="app" hidden>
+  <aside id="sidebar" aria-label="Library"></aside>
+  <div id="main">
+    <header id="toolbar">
+      <div id="scope-head">
+        <h1 id="scope-title"></h1>
+        <p id="scope-subtitle"></p>
+      </div>
+      <div id="toolbar-filters"></div>
+      <div id="toolbar-right">
+        <label id="zoom-wrap" class="zoom" title="Thumbnail size">
+          <span id="zoom-small" class="icon" aria-hidden="true"></span>
+          <input type="range" id="zoom" min="90" max="320" step="10" value="150" aria-label="Thumbnail size">
+          <span id="zoom-big" class="icon" aria-hidden="true"></span>
+        </label>
+        <button type="button" class="btn icon" id="jobs-btn" aria-label="Jobs" title="Jobs">
+          <span id="jobs-glyph" class="icon" aria-hidden="true"></span>
+          <span id="jobs-pulse" class="jobs-pulse" hidden></span>
+        </button>
+        <button type="button" class="account-btn" id="account-btn" aria-label="Account" aria-haspopup="menu">
+          <span id="account-initial">L</span>
+        </button>
+      </div>
+    </header>
+    <div id="timeline" hidden></div>
+    <div id="banners"></div>
+    <div id="view"></div>
+  </div>
+</div>
+
+<div id="actionbar" hidden></div>
+<div id="jobs" class="popover" role="dialog" aria-label="Jobs" hidden></div>
+<div id="toasts" aria-live="polite"></div>
+
+<div id="preview" hidden>
+  <div class="preview-top">
+    <button type="button" class="btn pv-select" id="pv-toggle"></button>
+    <span class="pv-pos" id="pv-pos"></span>
+    <span class="pv-total" id="pv-total"></span>
+    <button type="button" class="pv-close" id="pv-close" aria-label="Close preview"></button>
+  </div>
+  <button type="button" class="pv-nav pv-prev" id="pv-prev" aria-label="Previous"></button>
+  <div class="pv-stage">
+    <div class="pv-frame" id="pv-frame">
+      <img id="pv-img" alt="">
+      <video id="pv-vid" controls playsinline preload="metadata" hidden></video>
+      <span class="pv-badge" id="pv-badge" aria-hidden="true"></span>
+    </div>
+    <div class="pv-meta" id="pv-meta"></div>
+  </div>
+  <button type="button" class="pv-nav pv-next" id="pv-next" aria-label="Next"></button>
+</div>
+
+<div id="screens">
+  <section class="screen" data-screen="start" hidden>
+    <div class="start-card card">
+      <img class="app-icon" src="icon.png" alt="" width="96" height="96">
+      <h1>iCleaning</h1>
+      <p class="muted tagline" id="start-tagline"></p>
+      <div class="segmented mode-seg" id="mode-seg" role="tablist">
+        <button type="button" role="tab" data-mode="icloud" id="tab-icloud"></button>
+        <button type="button" role="tab" data-mode="usb" id="tab-usb"></button>
+      </div>
+      <form id="login-form" class="pane" autocomplete="off">
+        <label class="field-label" for="apple-id" id="apple-id-label"></label>
+        <input class="field" id="apple-id" type="text" autocomplete="username" spellcheck="false" autocapitalize="off">
+        <label class="field-label" for="password" id="password-label"></label>
+        <input class="field" id="password" type="password" autocomplete="current-password">
+        <p class="muted small" id="privacy-note"></p>
+        <p id="login-error" class="danger-text small" role="alert"></p>
+        <button class="btn primary wide" id="signin" type="submit"></button>
+      </form>
+      <div class="pane" id="usb-pane" hidden>
+        <div class="cable-illus" id="cable-art" aria-hidden="true"></div>
+        <p class="muted small" id="usb-note"></p>
+        <p id="usb-error" class="danger-text small" role="alert"></p>
+        <button class="btn primary wide" id="connect-usb" type="button"></button>
+      </div>
+      <button class="btn plain" id="try-demo" type="button"></button>
+    </div>
+  </section>
+
+  <section class="screen" data-screen="connecting" hidden>
+    <div class="center-card card">
+      <div class="spinner" aria-hidden="true"></div>
+      <h2 id="connecting-title"></h2>
+      <p class="muted" id="connecting-text"></p>
+      <button class="btn" id="connecting-cancel" type="button"></button>
+    </div>
+  </section>
+
+  <section class="screen" data-screen="2fa" hidden>
+    <div class="center-card card">
+      <h2 id="twofa-title"></h2>
+      <p class="muted" id="twofa-text"></p>
+      <div class="code-boxes" id="code-boxes">
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="1">
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" aria-label="2">
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" aria-label="3">
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" aria-label="4">
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" aria-label="5">
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" aria-label="6">
+      </div>
+      <p id="twofa-error" class="danger-text small" role="alert"></p>
+      <div class="row-buttons">
+        <button class="btn plain" id="twofa-resend" type="button"></button>
+        <button class="btn" id="twofa-cancel" type="button"></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" data-screen="terms" hidden>
+    <div class="center-card card">
+      <h2 id="terms-title"></h2>
+      <p class="muted" id="terms-text"></p>
+      <a class="terms-link" id="terms-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+      <label class="check-row" id="terms-check-row">
+        <input type="checkbox" id="terms-check">
+        <span id="terms-check-label"></span>
+      </label>
+      <button class="btn primary wide" id="terms-continue" type="button" disabled></button>
+    </div>
+  </section>
+
+  <section class="screen" data-screen="usb" hidden>
+    <div class="center-card card usb-card">
+      <h2 id="usb-title"></h2>
+      <p class="muted" id="usb-stage-text"></p>
+      <div class="progress" id="usb-progress" hidden><i id="usb-progress-bar"></i></div>
+      <p class="muted small" id="usb-detail"></p>
+      <p id="usb-screen-error" class="danger-text small" role="alert"></p>
+      <div class="row-buttons">
+        <button class="btn" id="usb-back" type="button"></button>
+        <button class="btn primary" id="usb-retry" type="button" hidden></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" data-screen="loading" hidden>
+    <div class="center-card card">
+      <h2 id="loading-title"></h2>
+      <p class="muted" id="loading-text"></p>
+      <div class="progress" id="loading-progress"><i id="loading-bar"></i></div>
+      <p class="muted small" id="loading-hint"></p>
+    </div>
+  </section>
+
+  <section class="screen" data-screen="fatal" hidden>
+    <div class="center-card card">
+      <h2 id="fatal-title"></h2>
+      <p class="muted" id="fatal-text"></p>
+    </div>
+  </section>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "icleaning"
+version = "0.9.0"
+description = "Revisa la fototeca de tu iPhone por lo que pesa, guarda en el PC y libera espacio (iCloud o cable)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["iphone", "icloud", "fotos", "fotos-iphone", "liberar-espacio"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Environment :: Web Environment",
+]
+
+# Versiones == las probadas en .venv; las de cada plataforma se instalan solo allí.
+dependencies = [
+    "pyicloud==2026.11.2",
+    "platformdirs==4.14.5",
+    "keyring==25.7.0",
+    "cryptography==50.0.2",
+    "pymobiledevice3==11.57.1",
+    "gphoto2==2.6.4; sys_platform == 'linux'",
+    "pyobjc-framework-ImageCaptureCore; sys_platform == 'darwin'",
+    "comtypes; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+icleaning = "icleaning.main:main"
+
+[tool.setuptools.packages.find]
+include = ["icleaning*"]
+
+# La pagina web (HTML/CSS/JS) viaja dentro del paquete: sin ella no hay interfaz.
+[tool.setuptools.package-data]
+icleaning = ["web/*", "web/**/*", "web/**/**/*"]
