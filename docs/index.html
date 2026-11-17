@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iCleaning: libera tu iPhone desde el ordenador</title>
+<meta name="description" content="Revisa la fototeca de tu iPhone desde el PC, ordenada por lo que pesa. Guarda lo que quieres conservar y borra el resto. Gratis y de código abierto.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta property="og:title" content="iCleaning">
+<meta property="og:description" content="Libera tu iPhone desde el ordenador. Gratis, de código abierto y sin servidores.">
+<meta property="og:image" content="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Schibsted+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3f6fb;
+  --surface: #ffffff;
+  --ink: #101a2e;
+  --muted: #55627a;
+  --line: #dbe3ef;
+  --accent: #1f5bff;
+  --accent-ink: #ffffff;
+  --track: #e4eaf4;
+
+  /* the iOS storage-bar palette, reused for the suggestion categories */
+  --c-keep: #5b8def;
+  --c-video: #ff9f0a;
+  --c-social: #30c25a;
+  --c-shot: #ff5a4f;
+  --c-dupe: #b26be8;
+  --c-similar: #14b8c4;
+  --c-system: #9aa6ba;
+
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --radius: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1220; --surface: #141c2f; --ink: #eaf0fc; --muted: #9aa8c3;
+    --line: #25314b; --accent: #5b8dff; --accent-ink: #0a1020; --track: #1c2740;
+    --c-system: #5d6a85;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1220; --surface: #141c2f; --ink: #eaf0fc; --muted: #9aa8c3;
+  --line: #25314b; --accent: #5b8dff; --accent-ink: #0a1020; --track: #1c2740;
+  --c-system: #5d6a85;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+
+.wrap { width: min(1080px, 100% - 32px); margin-inline: auto; }
+
+/* ---------- top bar ---------- */
+.top { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 800 1.25rem/1 var(--display); letter-spacing: -.01em; }
+.brand img { width: 34px; height: 34px; border-radius: 9px; }
+.top nav { display: flex; align-items: center; gap: 22px; font-size: .95rem; }
+.top nav a { text-decoration: none; color: var(--muted); }
+.top nav a:hover { color: var(--ink); }
+.lang { font: 600 .85rem var(--body); background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.lang:hover { border-color: var(--accent); }
+@media (max-width: 640px) { .top nav a.hide-sm { display: none; } }
+
+/* ---------- hero ---------- */
+.hero { padding: 40px 0 72px; }
+h1 {
+  font: 800 clamp(2.6rem, 7.2vw, 5.4rem)/.98 var(--display);
+  font-variation-settings: "opsz" 96;
+  letter-spacing: -.035em; margin: 0 0 22px; max-width: 14ch;
+}
+.lead { font-size: 1.2rem; color: var(--muted); max-width: 52ch; margin: 0 0 30px; }
+
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: var(--accent); color: var(--accent-ink);
+  font: 700 1.1rem/1 var(--display); text-decoration: none;
+  padding: 17px 26px; border-radius: 14px; border: 0; cursor: pointer;
+  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -10px color-mix(in srgb, var(--accent) 75%, transparent); }
+.btn svg { width: 22px; height: 22px; flex: none; }
+.btn small { display: block; font: 500 .78rem/1.2 var(--body); opacity: .85; margin-top: 4px; }
+.btn-text { display: block; }
+.cta .alt { color: var(--muted); font-size: .95rem; }
+.cta .alt a { color: var(--ink); font-weight: 600; }
+
+/* ---------- storage demo (the one memorable element) ---------- */
+.demo {
+  margin-top: 56px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 26px; padding: clamp(20px, 4vw, 36px);
+  box-shadow: 0 30px 60px -40px rgba(16, 26, 46, .35);
+}
+.demo-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 20px; margin-bottom: 18px; }
+.demo-head h2 { font: 700 1.15rem var(--display); margin: 0; }
+.demo-head .note { color: var(--muted); font-size: .85rem; }
+.bar {
+  display: flex; height: 38px; border-radius: 12px; overflow: hidden;
+  background: var(--track); gap: 2px;
+}
+.seg { height: 100%; flex: 0 0 auto; width: 0; transition: width .6s cubic-bezier(.3,.8,.2,1); }
+.freeline { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 2px 22px; gap: 12px; flex-wrap: wrap; }
+.freeline .free { font: 800 clamp(1.8rem, 4.5vw, 2.6rem)/1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.freeline .free span { font: 500 1rem var(--body); color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+.freeline .of { color: var(--muted); font-size: .95rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  --c: var(--c-system);
+  display: inline-flex; align-items: center; gap: 10px;
+  font: 600 .95rem var(--body); color: var(--ink);
+  background: transparent; border: 1.5px solid var(--line);
+  padding: 9px 14px 9px 12px; border-radius: 999px; cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
+}
+.chip::before { content: ""; width: 12px; height: 12px; border-radius: 4px; background: var(--c); flex: none; }
+.chip .gb { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.chip:hover { border-color: var(--c); }
+.chip[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 14%, transparent); border-color: var(--c); }
+.chip[aria-pressed="true"] > span:first-of-type { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.demo-actions { margin-top: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: .92rem; }
+.linkbtn { background: none; border: 0; padding: 0; font: 600 .92rem var(--body); color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- sections ---------- */
+section { padding: 72px 0; }
+h2.title { font: 800 clamp(1.9rem, 4.2vw, 3rem)/1.04 var(--display); letter-spacing: -.03em; margin: 0 0 14px; max-width: 18ch; }
+.sub { color: var(--muted); max-width: 56ch; margin: 0 0 40px; }
+
+/* what you can do: a ruled list, not a card grid */
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; border-top: 1px solid var(--line); }
+.steps li {
+  counter-increment: s; display: grid; grid-template-columns: 56px 1fr; gap: 6px 18px;
+  padding: 26px 0; border-bottom: 1px solid var(--line);
+}
+.steps li::before { content: counter(s); font: 800 2rem/1 var(--display); color: var(--accent); grid-row: span 2; }
+.steps h3 { font: 700 1.3rem var(--display); margin: 0; letter-spacing: -.01em; }
+.steps p { margin: 0; color: var(--muted); max-width: 62ch; }
+@media (min-width: 820px) {
+  .steps li { grid-template-columns: 56px 300px 1fr; align-items: baseline; }
+  .steps li::before { grid-row: auto; }
+}
+
+.two { display: grid; gap: 40px; }
+@media (min-width: 900px) { .two { grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; } }
+
+.facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; }
+.facts li { padding-left: 34px; position: relative; }
+.facts li::before {
+  content: ""; position: absolute; left: 0; top: .35em; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.5 17.2 4.8 12.5l1.4-1.4 3.3 3.3 8.3-8.3 1.4 1.4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.5 17.2 4.8 12.5l1.4-1.4 3.3 3.3 8.3-8.3 1.4 1.4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  background: var(--accent);
+}
+.facts b { font-weight: 600; }
+.facts span { color: var(--muted); display: block; }
+
+.warn { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--c-video); border-radius: 12px; padding: 18px 20px; color: var(--muted); font-size: .98rem; }
+.warn b { color: var(--ink); }
+
+/* ---------- downloads ---------- */
+.dl { background: var(--ink); color: var(--bg); border-radius: 32px; padding: clamp(28px, 6vw, 64px); }
+.dl h2.title { color: var(--bg); }
+.dl .sub { color: color-mix(in srgb, var(--bg) 70%, transparent); }
+.platforms { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.plat {
+  display: flex; flex-direction: column; gap: 4px; text-decoration: none;
+  background: color-mix(in srgb, var(--bg) 8%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--bg) 20%, transparent);
+  border-radius: 18px; padding: 20px 22px; transition: background .2s, border-color .2s, transform .15s;
+}
+.plat:hover { background: color-mix(in srgb, var(--bg) 14%, transparent); border-color: color-mix(in srgb, var(--bg) 55%, transparent); transform: translateY(-2px); }
+.plat[data-recommended="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.plat svg { width: 28px; height: 28px; margin-bottom: 8px; }
+.plat strong { font: 700 1.2rem var(--display); }
+.plat .file { font-size: .85rem; opacity: .75; word-break: break-all; }
+.plat .badge { font: 600 .78rem var(--body); margin-top: 8px; }
+.install { margin-top: 36px; display: grid; gap: 12px; }
+.install details { border-top: 1px solid color-mix(in srgb, var(--bg) 20%, transparent); padding-top: 12px; }
+.install summary { cursor: pointer; font: 600 1.05rem var(--display); padding: 6px 0; }
+.install details p, .install details ol { color: color-mix(in srgb, var(--bg) 75%, transparent); margin: 8px 0 4px; }
+.install ol { padding-left: 20px; }
+.install code, .verify code { font: .9em ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: color-mix(in srgb, var(--bg) 12%, transparent); padding: 2px 6px; border-radius: 6px; }
+.verify { margin-top: 28px; font-size: .93rem; color: color-mix(in srgb, var(--bg) 70%, transparent); }
+.verify a { color: var(--bg); }
+
+/* ---------- faq + footer ---------- */
+.faq details { border-top: 1px solid var(--line); padding: 16px 0; }
+.faq details:last-child { border-bottom: 1px solid var(--line); }
+.faq summary { cursor: pointer; font: 600 1.1rem var(--display); }
+.faq p { margin: 10px 0 0; color: var(--muted); max-width: 66ch; }
+
+footer { padding: 40px 0 56px; color: var(--muted); font-size: .9rem; }
+footer .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px 30px; }
+footer nav { display: flex; gap: 20px; flex-wrap: wrap; }
+footer a { text-decoration: none; }
+footer a:hover { color: var(--ink); text-decoration: underline; }
+footer p { margin: 18px 0 0; max-width: 70ch; font-size: .85rem; }
+
+/* one page-load moment: the bar fills in */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .seg, .btn, .plat { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#"><img src="icon.png" alt="" width="34" height="34">iCleaning</a>
+    <nav aria-label="Principal">
+      <a class="hide-sm" href="#que-hace" data-i18n="nav_what">Qué hace</a>
+      <a class="hide-sm" href="#privacidad" data-i18n="nav_privacy">Privacidad</a>
+      <a class="hide-sm" href="https://github.com/jaaviervalero/icleaning">GitHub</a>
+      <button class="lang" id="lang" type="button" aria-label="Cambiar idioma / Change language">EN</button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1 data-i18n="h1">Libera tu iPhone desde el ordenador.</h1>
+      <p class="lead" data-i18n="lead">Revisa tus fotos ordenadas por lo que pesan, guarda en el PC las que quieres conservar y borra el resto. Gratis, de código abierto y sin que tus fotos pasen por ningún servidor.</p>
+
+      <div class="cta">
+        <a class="btn" id="main-dl" href="https://github.com/jaaviervalero/icleaning/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>
+          <span class="btn-text"><span id="main-dl-label" data-i18n="dl_generic">Descargar iCleaning</span><small id="main-dl-sub">Windows, macOS y Linux</small></span>
+        </a>
+        <span class="alt"><a href="#descargas" data-i18n="other_platforms">Otras plataformas</a> · v0.9.0</span>
+      </div>
+
+      <div class="demo" aria-labelledby="demo-title">
+        <div class="demo-head">
+          <h2 id="demo-title" data-i18n="demo_title">Así se libera un iPhone de 128 GB</h2>
+          <span class="note" data-i18n="demo_note">Ejemplo ilustrativo. Pulsa una sugerencia para quitarla.</span>
+        </div>
+        <div class="bar" id="bar" role="img" aria-label="Barra de almacenamiento"></div>
+        <div class="freeline">
+          <div class="free"><span style="margin:0;font:inherit;color:inherit" id="free">8</span><span data-i18n="gb_free">GB libres</span></div>
+          <div class="of" id="of"></div>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="demo-actions">
+          <button class="linkbtn" id="reset" type="button" data-i18n="reset">Volver a empezar</button>
+          <span data-i18n="demo_foot">iCleaning propone estas mismas categorías con tus fotos reales.</span>
+        </div>
+      </div>
+    </div>
+
+    <section id="que-hace">
+      <h2 class="title" data-i18n="what_title">Elegir rápido, guardar y borrar.</h2>
+      <p class="sub" data-i18n="what_sub">Pensada para quien tiene la fototeca llena y no quiere pasar horas haciendo scroll en una pantalla de móvil.</p>
+      <ol class="steps">
+        <li><h3 data-i18n="s1_h">Conecta el iPhone</h3><p data-i18n="s1_p">Con tu Apple ID y verificación en dos pasos, o por cable USB sin escribir nada en el teléfono. El cable lee solo lo que hay guardado en el iPhone.</p></li>
+        <li><h3 data-i18n="s2_h">Revisa lo que más pesa</h3><p data-i18n="s2_p">Vídeos largos, capturas, fotos de WhatsApp, ráfagas sobrantes, duplicados, fotos parecidas y probablemente fallidas. Busca por personas, lugares, fechas, apps y tipos, con un mapa que funciona sin conexión.</p></li>
+        <li><h3 data-i18n="s3_h">Selecciona sin esfuerzo</h3><p data-i18n="s3_p">Clic, Mayús+clic para un rango, arrastrar para pintar y Ctrl/Cmd+A para todo lo filtrado.</p></li>
+        <li><h3 data-i18n="s4_h">Guarda los originales en el PC</h3><p data-i18n="s4_p">En la carpeta que elijas, incluido un disco externo, organizados por Año/Mes, País/Ciudad, Persona, Tipo o con tu propia plantilla. Sin recomprimir y con la fecha original.</p></li>
+        <li><h3 data-i18n="s5_h">Borra con calma</h3><p data-i18n="s5_p">Doble confirmación y un botón que se activa a los 7 segundos, para que te dé tiempo a leer lo que vas a eliminar.</p></li>
+      </ol>
+    </section>
+
+    <section id="privacidad">
+      <div class="two">
+        <div>
+          <h2 class="title" data-i18n="priv_title">Tus fotos no salen de tu ordenador.</h2>
+          <p class="sub" data-i18n="priv_sub">La interfaz es una página que sirve la propia app en tu equipo. No hay cuenta, ni servidor nuestro, ni analítica.</p>
+          <div class="warn" data-i18n-html="warn">
+            <b>Antes de borrar, guarda lo que quieras conservar.</b> En iCloud, las fotos borradas pasan a «Eliminado recientemente» y siguen ocupando espacio 30 días. Por cable, el borrado es definitivo y es una función experimental.
+          </div>
+        </div>
+        <ul class="facts">
+          <li><b data-i18n="f1_h">Solo en 127.0.0.1</b><span data-i18n="f1_p">No es accesible desde la red local ni desde internet. Cada arranque genera un token aleatorio.</span></li>
+          <li><b data-i18n="f2_h">Sin telemetría</b><span data-i18n="f2_p">Solo se conecta a Apple (iCloud) y, en modo cable, a tu iPhone.</span></li>
+          <li><b data-i18n="f3_h">Contraseña nunca guardada</b><span data-i18n="f3_p">La sesión de iCloud se guarda cifrada y la clave vive en el llavero de tu sistema.</span></li>
+          <li><b data-i18n="f4_h">Código abierto, licencia MIT</b><span data-i18n="f4_p">Puedes leer cada línea, y verificar tu descarga con SHA-256.</span></li>
+          <li><b data-i18n="f5_h">Interfaz en español e inglés</b><span data-i18n="f5_p">Con modo oscuro.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="descargas">
+      <div class="dl">
+        <h2 class="title" data-i18n="dl_title">Descarga iCleaning</h2>
+        <p class="sub" data-i18n="dl_sub">Un solo fichero, sin instalador. Gratis y sin registro.</p>
+
+        <div class="platforms" id="platforms">
+          <a class="plat" data-os="windows" href="https://github.com/jaaviervalero/icleaning/releases/latest/download/iCleaning-windows-x64.exe">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7H3zm8.5-1.2L21 3v8.4h-9.5zM3 12.6h7.5v7L3 18.5zm8.5 0H21V21l-9.5-1.3z"/></svg>
+            <strong>Windows</strong><span class="file">iCleaning-windows-x64.exe</span>
+          </a>
+          <a class="plat" data-os="mac-arm" href="https://github.com/jaaviervalero/icleaning/releases/latest/download/iCleaning-macos-arm64.zip">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.8-.8-3-.8c-1.5 0-3 .9-3.800 2.300-1.600 2.800-.4 7 1.200 9.300.800 1.100 1.700 2.400 2.900 2.300 1.200 0 1.600-.7 3-.7s1.800.7 3 .7 2-1.100 2.800-2.200c.9-1.300 1.200-2.500 1.300-2.600-.1 0-2.500-1-2.500-3.800zM14.200 6c.6-.8 1.100-1.900.9-3-.9 0-2.100.6-2.700 1.400-.6.700-1.100 1.800-1 2.900 1.100.1 2.200-.5 2.800-1.300z"/></svg>
+            <strong>macOS · Apple Silicon</strong><span class="file">iCleaning-macos-arm64.zip</span>
+            <span class="badge" data-i18n="mac_arm_hint">Macs de 2020 en adelante (M1, M2, M3, M4…)</span>
+          </a>
+          <a class="plat" data-os="mac-intel" href="https://github.com/jaaviervalero/icleaning/releases/latest/download/iCleaning-macos-x64.zip">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.8-.8-3-.8c-1.5 0-3 .9-3.800 2.300-1.600 2.800-.4 7 1.200 9.300.800 1.100 1.700 2.400 2.900 2.300 1.200 0 1.600-.7 3-.7s1.800.7 3 .7 2-1.100 2.800-2.200c.9-1.300 1.200-2.500 1.300-2.600-.1 0-2.500-1-2.500-3.800zM14.200 6c.6-.8 1.100-1.900.9-3-.9 0-2.100.6-2.700 1.400-.6.700-1.100 1.800-1 2.900 1.100.1 2.200-.5 2.800-1.300z"/></svg>
+            <strong>macOS · Intel</strong><span class="file">iCleaning-macos-x64.zip</span>
+            <span class="badge" data-i18n="mac_intel_hint">Macs anteriores a 2020</span>
+          </a>
+          <a class="plat" data-os="linux" href="https://github.com/jaaviervalero/icleaning/releases/latest/download/iCleaning-linux-x64">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3M12 15h5"/></svg>
+            <strong>Linux</strong><span class="file">iCleaning-linux-x64</span>
+          </a>
+        </div>
+
+        <div class="install">
+          <details>
+            <summary>Windows</summary>
+            <p data-i18n="win_p">La primera vez, SmartScreen avisa de que la app no está firmada: pulsa «Más información» y «Ejecutar de todas formas». Para el modo cable necesitas la app «Dispositivos de Apple» de Microsoft Store o iTunes.</p>
+          </details>
+          <details>
+            <summary>macOS</summary>
+            <p data-i18n="mac_p">Descomprime el ZIP que corresponda a tu Mac. La app no está firmada por Apple: ve a Ajustes del Sistema › Privacidad y seguridad y pulsa «Abrir igualmente». No tiene ventana propia: se abre en tu navegador, y para salir usa «Salir» en el menú de la cuenta.</p>
+          </details>
+          <details>
+            <summary>Linux</summary>
+            <p><span data-i18n="linux_p">Dale permisos de ejecución y ejecútalo. Para el modo cable necesitas</span> <code>usbmuxd</code>.</p>
+            <p><code>chmod +x iCleaning-linux-x64 &amp;&amp; ./iCleaning-linux-x64</code></p>
+          </details>
+        </div>
+        <p class="verify"><span data-i18n="verify">¿Quieres comprobar la descarga? Cada versión incluye</span> <a href="https://github.com/jaaviervalero/icleaning/releases/latest/download/SHA256SUMS.txt"><code>SHA256SUMS.txt</code></a>.</p>
+      </div>
+    </section>
+
+    <section class="faq" id="faq">
+      <h2 class="title" data-i18n="faq_title">Preguntas frecuentes</h2>
+      <p class="sub" style="margin-bottom:24px" data-i18n="faq_sub">Lo que más nos preguntan antes de empezar.</p>
+      <details><summary data-i18n="q1">¿Funciona con Android?</summary><p data-i18n="a1">No. iCleaning es solo para iPhone.</p></details>
+      <details><summary data-i18n="q2">¿Se pierde calidad al guardar?</summary><p data-i18n="a2">No. Se guarda el original, sin recomprimir ni modificar. Las ediciones hechas en el iPhone (recortes, filtros…) no se incluyen.</p></details>
+      <details><summary data-i18n="q3">He borrado fotos y iCloud sigue lleno.</summary><p data-i18n="a3">Las fotos borradas van a «Eliminado recientemente» y siguen ocupando espacio durante 30 días. Vacía esa carpeta en el iPhone para liberarlo de verdad.</p></details>
+      <details><summary data-i18n="q4">No me llega el código de verificación.</summary><p data-i18n="a4">En el iPhone, ve a Ajustes › tu nombre › Inicio de sesión y seguridad › Obtener código de verificación.</p></details>
+      <details><summary data-i18n="q5">Tengo activada la Protección avanzada de datos.</summary><p data-i18n="a5">Activa «Acceder a los datos de iCloud en la web» en Ajustes › tu nombre › iCloud antes de iniciar sesión en el modo iCloud.</p></details>
+      <details><summary data-i18n="q6">¿Por qué hay que conectar el iPhone por cable una vez?</summary><p data-i18n="a6">Las sugerencias por personas, lugares, apps y ráfagas se calculan con la base de datos de Fotos del iPhone, que se copia en modo solo lectura. Sin ese paso siguen funcionando los filtros por tamaño, fecha y tipo.</p></details>
+    </section>
+  </main>
+
+  <footer>
+    <div class="row">
+      <span>iCleaning · <span data-i18n="license">Licencia MIT</span></span>
+      <nav aria-label="Enlaces">
+        <a href="https://github.com/jaaviervalero/icleaning">GitHub</a>
+        <a href="https://github.com/jaaviervalero/icleaning/releases">Releases</a>
+        <a href="https://github.com/jaaviervalero/icleaning/blob/main/README.md" data-i18n="docs">Documentación</a>
+        <a href="https://github.com/jaaviervalero/icleaning/blob/main/SECURITY.md" data-i18n="security">Seguridad</a>
+      </nav>
+    </div>
+    <p data-i18n="legal">iCleaning no está afiliada a Apple. iPhone e iCloud son marcas de Apple Inc. El modo iCloud usa la API no oficial de iCloud a través de pyicloud, y Apple puede cambiarla y hacer que deje de funcionar.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- i18n ---------- */
+  var T = {
+    en: {
+      nav_what: "What it does", nav_privacy: "Privacy",
+      h1: "Free up your iPhone from your computer.",
+      lead: "Browse your photos sorted by size, save the ones you want to keep on your PC and delete the rest. Free, open source, and your photos never go through any server.",
+      dl_generic: "Download iCleaning", other_platforms: "Other platforms",
+      demo_title: "How a 128 GB iPhone gets freed up",
+      demo_note: "Illustrative example. Tap a suggestion to remove it.",
+      gb_free: "GB free", reset: "Start over",
+      demo_foot: "iCleaning suggests these same categories from your real photos.",
+      what_title: "Pick fast, save, delete.",
+      what_sub: "Made for people whose library is full and who don't want to scroll for hours on a phone screen.",
+      s1_h: "Connect your iPhone", s1_p: "With your Apple ID and two-step verification, or over a USB cable that writes nothing to the phone. The cable only reads what is stored on the iPhone.",
+      s2_h: "Review what weighs most", s2_p: "Long videos, screenshots, WhatsApp photos, leftover bursts, duplicates, similar photos and likely failed shots. Search by people, places, dates, apps and types, with a map that works offline.",
+      s3_h: "Select effortlessly", s3_p: "Click, Shift+click for a range, drag to paint, and Ctrl/Cmd+A for everything filtered.",
+      s4_h: "Save the originals to your PC", s4_p: "To any folder, including an external drive, organised by Year/Month, Country/City, Person, Type or your own template. No recompression, original dates kept.",
+      s5_h: "Delete with care", s5_p: "Double confirmation and a button that only enables after 7 seconds, so you have time to read what you are about to remove.",
+      priv_title: "Your photos never leave your computer.",
+      priv_sub: "The interface is a page served by the app on your own machine. No account, no server of ours, no analytics.",
+      warn: "<b>Save what you want to keep before deleting.</b> On iCloud, deleted photos go to “Recently Deleted” and keep using space for 30 days. Over cable, deletion is permanent and an experimental feature.",
+      f1_h: "Only on 127.0.0.1", f1_p: "Not reachable from your local network or the internet. Every launch generates a random token.",
+      f2_h: "No telemetry", f2_p: "It only talks to Apple (iCloud) and, in cable mode, to your iPhone.",
+      f3_h: "Password never stored", f3_p: "The iCloud session is saved encrypted and the key lives in your system keychain.",
+      f4_h: "Open source, MIT licence", f4_p: "Read every line, and verify your download with SHA-256.",
+      f5_h: "Spanish and English interface", f5_p: "With dark mode.",
+      dl_title: "Download iCleaning", dl_sub: "A single file, no installer. Free, no sign-up.",
+      mac_arm_hint: "Macs from 2020 on (M1, M2, M3, M4…)", mac_intel_hint: "Macs before 2020",
+      win_p: "The first time, SmartScreen warns that the app is unsigned: click “More info” then “Run anyway”. For cable mode you need the “Apple Devices” app from the Microsoft Store, or iTunes.",
+      mac_p: "Unzip the file for your Mac. The app is not signed by Apple: go to System Settings › Privacy & Security and click “Open Anyway”. It has no window of its own: it opens in your browser, and to quit use “Quit” in the account menu.",
+      linux_p: "Make it executable and run it. For cable mode you need",
+      verify: "Want to check your download? Every release includes",
+      faq_title: "Frequently asked questions", faq_sub: "What people ask most before starting.",
+      q1: "Does it work with Android?", a1: "No. iCleaning is for iPhone only.",
+      q2: "Is quality lost when saving?", a2: "No. The original is saved, without recompressing or modifying it. Edits made on the iPhone (crops, filters…) are not included.",
+      q3: "I deleted photos and iCloud is still full.", a3: "Deleted photos go to “Recently Deleted” and keep using space for 30 days. Empty that folder on the iPhone to really free it.",
+      q4: "I don't get the verification code.", a4: "On the iPhone, go to Settings › your name › Sign-In & Security › Get Verification Code.",
+      q5: "I have Advanced Data Protection on.", a5: "Turn on “Access iCloud Data on the Web” in Settings › your name › iCloud before signing in with iCloud mode.",
+      q6: "Why connect the iPhone by cable once?", a6: "Suggestions by people, places, apps and bursts are computed from the iPhone's Photos database, which is copied read-only. Without that step, size, date and type filters still work.",
+      license: "MIT licence", docs: "Documentation", security: "Security",
+      legal: "iCleaning is not affiliated with Apple. iPhone and iCloud are trademarks of Apple Inc. iCloud mode uses the unofficial iCloud API through pyicloud, and Apple may change it and make it stop working."
+    }
+  };
+  var nodes = document.querySelectorAll("[data-i18n],[data-i18n-html]");
+  var es = {};
+  nodes.forEach(function (n) {
+    var k = n.getAttribute("data-i18n") || n.getAttribute("data-i18n-html");
+    es[k] = n.hasAttribute("data-i18n-html") ? n.innerHTML.trim() : n.textContent;
+  });
+  T.es = es;
+
+  var lang = "es";
+  try { lang = localStorage.getItem("lang") || (/^en/i.test(navigator.language) ? "en" : "es"); } catch (e) {}
+
+  function setLang(l) {
+    lang = l;
+    document.documentElement.lang = l;
+    nodes.forEach(function (n) {
+      var html = n.hasAttribute("data-i18n-html");
+      var k = n.getAttribute(html ? "data-i18n-html" : "data-i18n");
+      if (T[l][k] == null) return;
+      if (html) n.innerHTML = T[l][k]; else n.textContent = T[l][k];
+    });
+    document.getElementById("lang").textContent = l === "es" ? "EN" : "ES";
+    document.title = l === "es" ? "iCleaning: libera tu iPhone desde el ordenador" : "iCleaning: free up your iPhone from your computer";
+    buildDemo();
+    detectOS();
+    try { localStorage.setItem("lang", l); } catch (e) {}
+  }
+  document.getElementById("lang").addEventListener("click", function () { setLang(lang === "es" ? "en" : "es"); });
+
+  /* ---------- storage demo ---------- */
+  var TOTAL = 128;
+  var segs = [
+    { id: "keep",    es: "Fotos que conservas", en: "Photos you keep",     gb: 41, c: "--c-keep",    fixed: true },
+    { id: "video",   es: "Vídeos largos",       en: "Long videos",         gb: 29, c: "--c-video" },
+    { id: "social",  es: "WhatsApp y redes",    en: "WhatsApp and social", gb: 13, c: "--c-social" },
+    { id: "shot",    es: "Capturas",            en: "Screenshots",         gb: 8,  c: "--c-shot" },
+    { id: "dupe",    es: "Duplicados",          en: "Duplicates",          gb: 6,  c: "--c-dupe" },
+    { id: "similar", es: "Parecidas",           en: "Similar photos",      gb: 5,  c: "--c-similar" },
+    { id: "system",  es: "Apps y sistema",      en: "Apps and system",     gb: 18, c: "--c-system", fixed: true }
+  ];
+  var removed = {};
+  var bar = document.getElementById("bar"), chips = document.getElementById("chips");
+  var freeEl = document.getElementById("free"), ofEl = document.getElementById("of");
+  var shown = 0, raf;
+
+  function used() { return segs.reduce(function (a, s) { return a + (removed[s.id] ? 0 : s.gb); }, 0); }
+
+  function buildDemo() {
+    bar.innerHTML = ""; chips.innerHTML = "";
+    segs.forEach(function (s) {
+      var d = document.createElement("div");
+      d.className = "seg"; d.id = "seg-" + s.id;
+      d.style.background = "var(" + s.c + ")";
+      d.title = s[lang] + " · " + s.gb + " GB";
+      bar.appendChild(d);
+      if (s.fixed) return;
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.style.setProperty("--c", "var(" + s.c + ")");
+      b.setAttribute("aria-pressed", removed[s.id] ? "true" : "false");
+      b.innerHTML = "<span>" + s[lang] + "</span><span class=\"gb\">" + s.gb + " GB</span>";
+      b.addEventListener("click", function () {
+        removed[s.id] = !removed[s.id];
+        b.setAttribute("aria-pressed", removed[s.id] ? "true" : "false");
+        render();
+      });
+      chips.appendChild(b);
+    });
+    render(true);
+  }
+
+  function render(instant) {
+    segs.forEach(function (s) {
+      var el = document.getElementById("seg-" + s.id);
+      el.style.width = removed[s.id] ? "0%" : (s.gb / TOTAL * 100) + "%";
+    });
+    var u = used(), free = TOTAL - u;
+    ofEl.textContent = (lang === "es" ? "Usado: " : "Used: ") + u + " GB / " + TOTAL + " GB";
+    bar.setAttribute("aria-label", (lang === "es" ? "Usado " : "Used ") + u + " GB " + (lang === "es" ? "de " : "of ") + TOTAL + " GB");
+    cancelAnimationFrame(raf);
+    var from = shown, start = performance.now(), dur = instant || matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 600;
+    (function tick(now) {
+      var t = dur ? Math.min(1, (now - start) / dur) : 1;
+      shown = Math.round(from + (free - from) * (1 - Math.pow(1 - t, 3)));
+      freeEl.textContent = shown;
+      if (t < 1) raf = requestAnimationFrame(tick);
+    })(start);
+  }
+
+  document.getElementById("reset").addEventListener("click", function () {
+    removed = {};
+    chips.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", "false"); });
+    render();
+  });
+
+  /* load: start full, then the bar fills in once */
+  shown = 0;
+
+  /* ---------- OS detection: pick the main download button ---------- */
+  var BASE = "https://github.com/jaaviervalero/icleaning/releases/latest/download/";
+  function detectOS() {
+    var ua = navigator.userAgent, p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+    var os = null;
+    if (/android|iphone|ipad|ipod/i.test(ua)) os = null;       // phones: the app is for desktops
+    else if (/win/i.test(p + ua)) os = "windows";
+    else if (/mac/i.test(p + ua)) os = "mac";
+    else if (/linux|x11/i.test(p + ua)) os = "linux";
+
+    var btn = document.getElementById("main-dl"), label = document.getElementById("main-dl-label"), sub = document.getElementById("main-dl-sub");
+    var es_ = lang === "es";
+    var map = {
+      windows: { href: BASE + "iCleaning-windows-x64.exe", name: "Windows", sub: "iCleaning-windows-x64.exe" },
+      mac:     { href: BASE + "iCleaning-macos-arm64.zip",  name: "macOS",   sub: es_ ? "Apple Silicon · ¿Mac Intel? Mira «Otras plataformas»" : "Apple Silicon · Intel Mac? See “Other platforms”" },
+      linux:   { href: BASE + "iCleaning-linux-x64",        name: "Linux",   sub: "iCleaning-linux-x64" }
+    };
+    document.querySelectorAll(".plat").forEach(function (a) { a.removeAttribute("data-recommended"); });
+    if (os && map[os]) {
+      btn.href = map[os].href;
+      label.textContent = (es_ ? "Descargar para " : "Download for ") + map[os].name;
+      sub.textContent = map[os].sub;
+      var sel = os === "mac" ? "mac-arm" : os;
+      var rec = document.querySelector('.plat[data-os="' + sel + '"]');
+      if (rec) rec.setAttribute("data-recommended", "true");
+    } else {
+      btn.href = "https://github.com/jaaviervalero/icleaning/releases/latest";
+      label.textContent = es_ ? "Descargar iCleaning" : "Download iCleaning";
+      sub.textContent = es_ ? "Windows, macOS y Linux" : "Windows, macOS and Linux";
+    }
+  }
+
+  setLang(lang);
+  // after first paint, let the bar grow from empty to the starting state
+  segs.forEach(function (s) { document.getElementById("seg-" + s.id).style.width = "0%"; });
+  shown = 0; freeEl.textContent = "0";
+  requestAnimationFrame(function () { requestAnimationFrame(function () { render(); }); });
+})();
+</script>
+</body>
+</html>
